@@ -1,6 +1,8 @@
 #include <boost/mpi/environment.hpp>
 #include <boost/mpi/communicator.hpp>
 #include <iostream>
+#include <fstream>
+#include <sstream>
 #include "Table.hpp"
 #include "MapReduce.hpp"
 #include "Selector.hpp"
@@ -21,6 +23,8 @@ void optimize_join(std::vector<Table>& input)
 	}
 	FullReducer reducer(attrs);
 	auto list = reducer.build();
+
+	/*
 	for (auto i : list)
 	{
 		for (auto j : i.first)
@@ -30,10 +34,11 @@ void optimize_join(std::vector<Table>& input)
 			std::cout << j << ' ';
 		std::cout << std::endl;
 	}
+	*/
 	for (const auto& p : list)
 	{
-		for (auto t : input)
-			t.print();
+		//for (auto t : input)
+		//	t.print();
 		std::vector<int> param1;
 		std::vector<int> param2;
 		for (int i = 0; i < p.first.size(); ++i)
@@ -110,6 +115,58 @@ void optimize_join(std::vector<Table>& input)
 		attr = new_attr;
 	}
 	table.print();
+}
+
+Table generateTables(std::string address, int numcol, bool sample=true)
+{
+	std::vector<std::vector<std::string>> table;
+	std:: ifstream fp(address);
+	std::string line;
+
+	// first line (col names)
+	std::getline(fp, line);
+	std::vector<std::string> attr;
+	std::string item;
+	std::istringstream readstr(line);
+	for (int j = 0; j < numcol; j++)
+	{
+		std::getline(readstr, item, ',');
+		attr.push_back(item);
+	}
+
+	int maxnum = 100;
+	if (sample)
+	{
+		int cnt = 0;
+		while (std::getline(fp, line) && cnt < maxnum)
+		{
+			std::vector<std::string> data_line;
+			std::istringstream readstr(line);
+			for (int j = 0; j < numcol; j++)
+			{
+				std::getline(readstr, item, ',');
+				data_line.push_back(item);
+			}
+			table.push_back(data_line);
+			cnt++;
+		}
+	}
+	else
+	{
+		while (std::getline(fp, line))
+		{
+			std::vector<std::string> data_line;
+			std::istringstream readstr(line);
+			for (int j = 0; j < numcol; j++)
+			{
+				std::getline(readstr, item, ',');
+				data_line.push_back(item);
+			}
+			table.push_back(data_line);
+		}
+	}
+
+	return Table(table, attr);
 }
 
 int main()
@@ -193,8 +250,15 @@ int main()
 			std::vector<std::string>{"c", "3", "5"},
 			std::vector<std::string>{"d", "2", "3"},
 	}, { "A", "C", "E" });
-	std::vector<Table> tables = { t, t2, t3, t4 };
+	// std::vector<Table> tables = { t, t2, t3, t4 };
+
+	Table base = generateTables("./data/base.csv", 124, false);
+	Table trans = generateTables("./data/trans.csv", 52, false);
+	std::vector<Table> tables = { base, trans };
+	// table.print();
+
 	optimize_join(tables);
+
 	//mr.start(t);
 
 	//MapReduce<Projector> mr2(world, { 0, 1, 3 });

@@ -51,6 +51,11 @@ public:
 	}
 	void print()
 	{
+		for (auto& str : attr)
+		{
+			std::cout << str << ' ';
+		}
+		std::cout << '\n';
 		for (auto& row : v)
 		{
 			for (auto& str : row)
